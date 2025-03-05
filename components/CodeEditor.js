@@ -22,6 +22,7 @@ export default function CodeEditor({ owner, repo }) {
   const editorViewRef = useRef(null);
 
   const token = "";
+  
   // Load dark mode preference
   useEffect(() => {
     if (typeof window !== "undefined") {
