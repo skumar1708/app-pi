@@ -53,6 +53,10 @@ export default function Home() {
         if (!response.ok) alert("Please copy your prompt,  refresh page and try again");
 
         const data = response.json ? await response.json() : null;
+        if(!data) {
+          isComplete = true;
+        }
+
         const currentStatus = { status: data?.status, url: data?.url};
 
         if (currentStatus && currentStatus?.status) {
