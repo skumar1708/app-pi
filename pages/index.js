@@ -11,7 +11,7 @@ export default function Home() {
   const textareaRef = useRef(null);
   const [appName, setAppName] = useState("");
 
-  const API_BASE_URL = "http://localhost:5000";//"https://app-generator-backend.vercel.app";
+  const API_BASE_URL = "https://app-generator-backend.vercel.app";
 
   const handleGenerate = async () => {
     setStatusMessages([]);
