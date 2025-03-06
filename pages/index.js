@@ -11,28 +11,27 @@ export default function Home() {
   const textareaRef = useRef(null);
   const [appName, setAppName] = useState("");
 
-  const API_BASE_URL = "https://app-generator-backend.vercel.app";
+  const API_BASE_URL = "http://localhost:5000";//"https://app-generator-backend.vercel.app";
 
   const handleGenerate = async () => {
+    setStatusMessages([]);
+    setLoading(true);
+    setIsDeployed(false);
+    setDeployedUrl(null);
+    setShowStatusPopup(true);
     try {
-      setStatusMessages([]);
-      setLoading(true);
-      setIsDeployed(false);
-      setDeployedUrl(null);
-      setShowStatusPopup(true);
-
       const response = await fetch(`${API_BASE_URL}/generateProject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: input }),
       });
 
-      if (!response.ok) throw new Error("Failed to start project creation");
+      if (!response.ok) alert("Prompt is required!!");
 
       const data = await response.json();
-      setAppName(data.appName);
+      setAppName(data?.appName);
 
-      checkStatus(data.appName);
+      checkStatus(data?.appName);
     } catch (error) {
       console.error("Error:", error);
       setStatusMessages([{ text: `❌ Error: ${error.message}`, loading: false }]);
@@ -44,11 +43,17 @@ export default function Home() {
     try {
       let isComplete = false;
       while (!isComplete) {
-        const response = await fetch(`${API_BASE_URL}/status`);
-        if (!response.ok) throw new Error("Failed to fetch status");
+        const response = await fetch(`${API_BASE_URL}/status`, {
+          method: "POST",  headers: {
+            "Content-Type": "application/json",
+        },
+         body: JSON.stringify({appName})
+        });
 
-        const data = await response.json();
-        const currentStatus = { status: data[appName]?.status, url: data[appName]?.url};
+        if (!response.ok) alert("Please copy your prompt,  refresh page and try again");
+
+        const data = response.json ? await response.json() : null;
+        const currentStatus = { status: data?.status, url: data?.url};
 
         if (currentStatus && currentStatus?.status) {
           setStatusMessages((prev) => [
@@ -66,6 +71,27 @@ export default function Home() {
             setIsDeployed(true);
             setLoading(false);
             isComplete = true;
+
+            setStatusMessages((prev) => [
+              ...prev.map(item => {
+                return {
+                  ...item,
+                  loading: false
+                }
+               })
+            ]);
+
+            if (!currentStatus.url) {
+              setStatusMessages((prev) => [
+                ...prev.map(item => {
+                  return {
+                    ...item,
+                    loading: false
+                  }
+                 }),
+                 { text: "System encountered some error, please close this popup and retry again", loading: false, isError: true }
+              ]);
+            }
           }
         }
 
@@ -95,6 +121,11 @@ export default function Home() {
     }
   };
 
+  
+  const handleStatusButtonClick = () => {
+    setShowStatusPopup(true);
+  };
+
  // if (true) {
   //   return <CodeSandboxClone owner="skumar1708" repo="app-1740982882661"/>
   // }
@@ -111,10 +142,18 @@ export default function Home() {
         style={{ minHeight: "100px" }}
       />
       <div className="flex mt-4">
-        <button className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded" onClick={handleGenerate} disabled={loading}>
+        <button disabled={loading} className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded" onClick={handleGenerate}>
           {loading ? "Generating..." : isDeployed ? "Regenerate" : "Generate"}
         </button>
-        {isDeployed && (
+        {!showStatusPopup && !isDeployed && statusMessages.length > 0 && (
+          <button
+            className="bg-gray-500 text-white px-4 py-2 rounded ml-2"
+            onClick={handleStatusButtonClick}
+          >
+            Status
+          </button>
+        )}
+        {isDeployed && deployedUrl && (
           <button className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded ml-2" onClick={handlePreview}>
             Preview
           </button>
@@ -129,11 +168,17 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h2 className="text-lg font-semibold mb-4">Status Messages</h2>
+            <h2 className="text-lg font-semibold mb-4">Generation Status</h2>
+            <div className="relative w-full bg-gray-200 rounded-full h-2.5 mb-4">
+              <div
+                className="bg-green-500 h-2.5 rounded-full"
+                style={{ width: `${(statusMessages.length / (isDeployed ? statusMessages.length : 10)) * 100}%` }}
+              ></div>
+            </div>
             <ul className="space-y-1 rounded-xl overflow-hidden divide-y divide-gray-300">
               {statusMessages.map((item, index) => (
                 <li key={index} className="flex items-center gap-3 transition duration-300">
-                  {item.loading ?  <span className="animate-spin text-blue-600">↻</span> : <span>✅</span>}
+                  {item.loading ?  <span className="animate-spin text-blue-600">↻ </span> : (item.isError ? <span>❌</span> : <span>✅</span>)}
                   <span className="font-medium">{item.text}</span>
                 </li>
               ))}
